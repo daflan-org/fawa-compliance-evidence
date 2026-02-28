@@ -1,0 +1,8 @@
+{
+  "testId": "device-sync-e2e",
+  "sourcePath": "apps/api/test/device-sync.e2e.spec.ts",
+  "suiteType": "e2e",
+  "result": "passed",
+  "executedAt": "2026-02-28T21:44:23.877Z",
+  "source": "integration_e2e_job"
+}
