@@ -28,7 +28,7 @@ cosign verify-attestation ghcr.io/<org>/<image>@sha256:<digest> \
 CHANGED_FILES_JSON='["packages/socket-contracts/src/app-events.ts"]' \
 GITHUB_REF_NAME='daf-418-store-compliance-backend-evidence-for-daf-307' \
 GITHUB_EVENT_NAME='pull_request' \
-node scripts/policy/build-policy-input.mjs && \
+yarn policy:build-input && \
 conftest test policy-input.json -p policy/repo
 ```
 

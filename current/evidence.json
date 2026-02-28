@@ -11,7 +11,7 @@
     "provider": "OPA + Conftest",
     "workflowPath": ".github/workflows/ci-tests.yml",
     "policyPath": "policy/repo/ci.rego",
-    "inputBuilderPath": "scripts/policy/build-policy-input.mjs"
+    "inputBuilderPath": "scripts/policy/build-policy-input.ts"
   },
   "attestationStatus": {
     "provider": "Sigstore Cosign",
@@ -49,7 +49,7 @@
     },
     {
       "label": "Run local policy checks",
-      "command": "CHANGED_FILES_JSON='[\"packages/socket-contracts/src/app-events.ts\"]' GITHUB_REF_NAME='daf-418-store-compliance-backend-evidence-for-daf-307' GITHUB_EVENT_NAME='pull_request' node scripts/policy/build-policy-input.mjs && conftest test policy-input.json -p policy/repo"
+      "command": "CHANGED_FILES_JSON='[\"packages/socket-contracts/src/app-events.ts\"]' GITHUB_REF_NAME='daf-418-store-compliance-backend-evidence-for-daf-307' GITHUB_EVENT_NAME='pull_request' yarn policy:build-input && conftest test policy-input.json -p policy/repo"
     }
   ],
   "limits": [

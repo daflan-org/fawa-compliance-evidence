@@ -31,7 +31,12 @@
     "policyStatus": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["provider", "workflowPath", "policyPath", "inputBuilderPath"],
+      "required": [
+        "provider",
+        "workflowPath",
+        "policyPath",
+        "inputBuilderPath"
+      ],
       "properties": {
         "provider": { "type": "string", "minLength": 1 },
         "workflowPath": { "type": "string", "minLength": 1 },
@@ -60,7 +65,10 @@
         "additionalProperties": false,
         "required": ["key", "title", "path", "url", "sha"],
         "properties": {
-          "key": { "type": "string", "enum": ["trustCompliance", "storeCompliance"] },
+          "key": {
+            "type": "string",
+            "enum": ["trustCompliance", "storeCompliance"]
+          },
           "title": { "type": "string", "minLength": 1 },
           "path": { "type": "string", "minLength": 1 },
           "url": { "type": "string", "minLength": 1 },

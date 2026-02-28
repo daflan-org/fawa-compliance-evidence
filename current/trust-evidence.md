@@ -25,7 +25,7 @@ Policy:
 
 Input builder:
 
-- `scripts/policy/build-policy-input.mjs`
+- `scripts/policy/build-policy-input.ts`
 
 ## Cosign Dogrulama
 
