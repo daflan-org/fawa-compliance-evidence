@@ -38,6 +38,7 @@
       "sha": "195d143c1155d2a258b47129b7f85aa21486854b"
     }
   ],
+  "testEvidence": [],
   "verificationCommands": [
     {
       "label": "Verify container signature",
