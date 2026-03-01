@@ -1,0 +1,53 @@
+{
+  "schemaVersion": "1.1.0",
+  "testId": "device-sync-e2e",
+  "sourcePath": "apps/api/test/device-sync.e2e.spec.ts",
+  "suiteType": "e2e",
+  "result": "passed",
+  "executedAt": "2026-03-01T05:26:34.972Z",
+  "runId": "22536690197",
+  "jobName": "Integration And E2E Tests",
+  "sourceCommitSha": "4383a2db10691e6e2940ab06fbf42d4bda88c88d",
+  "workflowPath": ".github/workflows/ci-tests.yml",
+  "assertions": [
+    {
+      "assertionId": "device-sync-endpoint-exists",
+      "name": "Device sync endpoint assertion exists",
+      "status": "passed",
+      "expected": "Device sync E2E test must call /devices/sync/v1 endpoint.",
+      "actual": "Matched includes assertion in apps/api/test/device-sync.e2e.spec.ts.",
+      "evidenceRef": {
+        "filePath": "apps/api/test/device-sync.e2e.spec.ts",
+        "matcherType": "includes",
+        "matcher": ".post(\"/devices/sync/v1\")"
+      },
+      "verifiedAt": "2026-03-01T05:26:34.972Z"
+    },
+    {
+      "assertionId": "device-sync-durable-inbox-assertion",
+      "name": "Device sync durable inbox assertion exists",
+      "status": "passed",
+      "expected": "Device sync E2E test must assert durable inbox write with toBeDefined().",
+      "actual": "Matched includes assertion in apps/api/test/device-sync.e2e.spec.ts.",
+      "evidenceRef": {
+        "filePath": "apps/api/test/device-sync.e2e.spec.ts",
+        "matcherType": "includes",
+        "matcher": "expect(inbox).toBeDefined();"
+      },
+      "verifiedAt": "2026-03-01T05:26:34.972Z"
+    },
+    {
+      "assertionId": "device-sync-record-processing-assertion",
+      "name": "Device sync record processing assertion exists",
+      "status": "passed",
+      "expected": "Device sync E2E test must assert asynchronous location record processing.",
+      "actual": "Matched includes assertion in apps/api/test/device-sync.e2e.spec.ts.",
+      "evidenceRef": {
+        "filePath": "apps/api/test/device-sync.e2e.spec.ts",
+        "matcherType": "includes",
+        "matcher": "expect(foundLocation).toBe(true);"
+      },
+      "verifiedAt": "2026-03-01T05:26:34.972Z"
+    }
+  ]
+}

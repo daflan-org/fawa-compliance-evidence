@@ -1,0 +1,53 @@
+{
+  "schemaVersion": "1.1.0",
+  "testId": "sos-e2e",
+  "sourcePath": "apps/api/test/sos.e2e.spec.ts",
+  "suiteType": "e2e",
+  "result": "passed",
+  "executedAt": "2026-03-01T05:26:34.975Z",
+  "runId": "22536690197",
+  "jobName": "Integration And E2E Tests",
+  "sourceCommitSha": "4383a2db10691e6e2940ab06fbf42d4bda88c88d",
+  "workflowPath": ".github/workflows/ci-tests.yml",
+  "assertions": [
+    {
+      "assertionId": "sos-endpoint-exists",
+      "name": "SOS endpoint assertion exists",
+      "status": "passed",
+      "expected": "SOS E2E test must call /device/sos/v1 endpoint.",
+      "actual": "Matched includes assertion in apps/api/test/sos.e2e.spec.ts.",
+      "evidenceRef": {
+        "filePath": "apps/api/test/sos.e2e.spec.ts",
+        "matcherType": "includes",
+        "matcher": ".post(\"/device/sos/v1\")"
+      },
+      "verifiedAt": "2026-03-01T05:26:34.975Z"
+    },
+    {
+      "assertionId": "sos-audit-action-assertion",
+      "name": "SOS audit action assertion exists",
+      "status": "passed",
+      "expected": "SOS E2E test must query audit log for DEVICE.SOS_TRIGGERED action.",
+      "actual": "Matched includes assertion in apps/api/test/sos.e2e.spec.ts.",
+      "evidenceRef": {
+        "filePath": "apps/api/test/sos.e2e.spec.ts",
+        "matcherType": "includes",
+        "matcher": "action: \"DEVICE.SOS_TRIGGERED\""
+      },
+      "verifiedAt": "2026-03-01T05:26:34.975Z"
+    },
+    {
+      "assertionId": "sos-audit-presence-assertion",
+      "name": "SOS audit persistence assertion exists",
+      "status": "passed",
+      "expected": "SOS E2E test must assert persisted audit log with toBeDefined().",
+      "actual": "Matched includes assertion in apps/api/test/sos.e2e.spec.ts.",
+      "evidenceRef": {
+        "filePath": "apps/api/test/sos.e2e.spec.ts",
+        "matcherType": "includes",
+        "matcher": "expect(sosAuditLog).toBeDefined();"
+      },
+      "verifiedAt": "2026-03-01T05:26:34.975Z"
+    }
+  ]
+}
