@@ -1,0 +1,204 @@
+name: Verify And Publish Falcon Evidence
+
+on:
+  repository_dispatch:
+    types: [falcon-deploy-verified]
+  workflow_dispatch:
+    inputs:
+      source_repo:
+        description: Source repository (owner/repo)
+        required: true
+        type: string
+      source_ref:
+        description: Source branch/ref
+        required: true
+        type: string
+      source_sha:
+        description: Source commit SHA
+        required: true
+        type: string
+      environment:
+        description: Deployment environment
+        required: true
+        type: string
+      ci_run_id:
+        description: Falcon CI run ID
+        required: true
+        type: string
+      ci_artifact_name:
+        description: Falcon CI compliance artifact name
+        required: true
+        type: string
+      policy_artifact_name:
+        description: Falcon CI policy provenance artifact name
+        required: true
+        type: string
+      deploy_run_id:
+        description: Falcon deploy run ID
+        required: true
+        type: string
+      deploy_workflow_name:
+        description: Falcon deploy workflow name
+        required: true
+        type: string
+      deploy_run_number:
+        description: Falcon deploy run number
+        required: true
+        type: string
+      api_image:
+        description: API image name
+        required: true
+        type: string
+      api_digest:
+        description: API image digest
+        required: true
+        type: string
+      worker_image:
+        description: Worker image name
+        required: true
+        type: string
+      worker_digest:
+        description: Worker image digest
+        required: true
+        type: string
+
+permissions:
+  contents: write
+  actions: read
+
+concurrency:
+  group: verify-${{ github.event_name == 'repository_dispatch' && github.event.client_payload.deploy_run_id || github.event.inputs.deploy_run_id || github.run_id }}
+  cancel-in-progress: false
+
+jobs:
+  verify_and_publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout public evidence repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Normalize dispatch payload
+        run: |
+          set -euo pipefail
+          mkdir -p out/dispatch
+          if [ "${{ github.event_name }}" = "repository_dispatch" ]; then
+            cat <<'EOF' > out/dispatch/payload.json
+          ${{ toJson(github.event.client_payload) }}
+          EOF
+          else
+            jq -n \
+              --arg source_repo "${{ github.event.inputs.source_repo }}" \
+              --arg source_ref "${{ github.event.inputs.source_ref }}" \
+              --arg source_sha "${{ github.event.inputs.source_sha }}" \
+              --arg environment "${{ github.event.inputs.environment }}" \
+              --arg ci_run_id "${{ github.event.inputs.ci_run_id }}" \
+              --arg ci_artifact_name "${{ github.event.inputs.ci_artifact_name }}" \
+              --arg policy_artifact_name "${{ github.event.inputs.policy_artifact_name }}" \
+              --arg deploy_run_id "${{ github.event.inputs.deploy_run_id }}" \
+              --arg deploy_workflow_name "${{ github.event.inputs.deploy_workflow_name }}" \
+              --arg deploy_run_number "${{ github.event.inputs.deploy_run_number }}" \
+              --arg api_image "${{ github.event.inputs.api_image }}" \
+              --arg api_digest "${{ github.event.inputs.api_digest }}" \
+              --arg worker_image "${{ github.event.inputs.worker_image }}" \
+              --arg worker_digest "${{ github.event.inputs.worker_digest }}" \
+              '{
+                source_repo: $source_repo,
+                source_ref: $source_ref,
+                source_sha: $source_sha,
+                environment: $environment,
+                ci_run_id: $ci_run_id,
+                ci_artifact_name: $ci_artifact_name,
+                policy_artifact_name: $policy_artifact_name,
+                deploy_run_id: $deploy_run_id,
+                deploy_workflow_name: $deploy_workflow_name,
+                deploy_run_number: $deploy_run_number,
+                api_image: $api_image,
+                api_digest: $api_digest,
+                worker_image: $worker_image,
+                worker_digest: $worker_digest
+              }' > out/dispatch/payload.json
+          fi
+          jq . out/dispatch/payload.json
+
+      - name: Extract payload outputs
+        id: payload
+        run: |
+          set -euo pipefail
+          echo "source_sha=$(jq -r '.source_sha' out/dispatch/payload.json)" >> "$GITHUB_OUTPUT"
+          echo "ci_run_id=$(jq -r '.ci_run_id' out/dispatch/payload.json)" >> "$GITHUB_OUTPUT"
+          echo "ci_artifact_name=$(jq -r '.ci_artifact_name' out/dispatch/payload.json)" >> "$GITHUB_OUTPUT"
+          echo "policy_artifact_name=$(jq -r '.policy_artifact_name' out/dispatch/payload.json)" >> "$GITHUB_OUTPUT"
+
+      - name: Create GitHub App token for Falcon
+        id: falcon-token
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ secrets.EVIDENCE_BOT_APP_ID }}
+          private-key: ${{ secrets.EVIDENCE_BOT_APP_PRIVATE_KEY }}
+          owner: panalgin
+          repositories: falcon
+
+      - name: Validate Falcon runs and artifact availability
+        run: npx --yes tsx scripts/ingest-falcon-evidence.ts
+        env:
+          FALCON_TOKEN: ${{ steps.falcon-token.outputs.token }}
+          DISPATCH_PAYLOAD_PATH: out/dispatch/payload.json
+          INGEST_OUTPUT_PATH: out/ingest/falcon.json
+
+      - name: Download Falcon CI compliance evidence artifact
+        uses: actions/download-artifact@v4
+        with:
+          github-token: ${{ steps.falcon-token.outputs.token }}
+          repository: panalgin/falcon
+          run-id: ${{ steps.payload.outputs.ci_run_id }}
+          name: ${{ steps.payload.outputs.ci_artifact_name }}
+          path: out/test-evidence
+
+      - name: Download Falcon policy provenance artifact
+        uses: actions/download-artifact@v4
+        with:
+          github-token: ${{ steps.falcon-token.outputs.token }}
+          repository: panalgin/falcon
+          run-id: ${{ steps.payload.outputs.ci_run_id }}
+          name: ${{ steps.payload.outputs.policy_artifact_name }}
+          path: out/policy
+
+      - name: Ensure required artifacts exist
+        run: |
+          set -euo pipefail
+          test -f out/test-evidence/compliance-test-evidence-manifest.json
+          test -f out/policy/policy-provenance.json
+
+      - name: Build evidence payload and deploy metadata
+        run: npx --yes tsx scripts/build-evidence.ts
+        env:
+          INGEST_PATH: out/ingest/falcon.json
+          TEST_MANIFEST_PATH: out/test-evidence/compliance-test-evidence-manifest.json
+          POLICY_PROVENANCE_PATH: out/policy/policy-provenance.json
+          CURRENT_DIR: current
+
+      - name: Publish immutable history snapshot
+        run: npx --yes tsx scripts/publish-snapshot.ts
+        env:
+          CURRENT_DIR: current
+          HISTORY_DIR: history
+
+      - name: Commit and push evidence updates
+        env:
+          SOURCE_SHA: ${{ steps.payload.outputs.source_sha }}
+        run: |
+          set -euo pipefail
+          if git diff --quiet && git diff --cached --quiet; then
+            echo "No evidence changes to publish."
+            exit 0
+          fi
+
+          git add current history policy schemas scripts .github/workflows README.md
+          git -c user.name="github-actions[bot]" -c user.email="41898282+github-actions[bot]@users.noreply.github.com" \
+            commit -m "chore(evidence): verify falcon ${SOURCE_SHA:0:12}"
+          git push origin HEAD:main

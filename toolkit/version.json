@@ -1,0 +1,23 @@
+{
+  "version": "1.0.0",
+  "updatedAt": "2026-03-01T00:00:00.000Z",
+  "integrityAlgorithm": "sha256",
+  "scripts": {
+    "buildPolicyInput": {
+      "filePath": "toolkit/v1/build-policy-input.ts",
+      "sha256": "f2c5582ccf49edd4b3c01574c1484a806aae869c81a424022b3d53f1587b81f4"
+    },
+    "runTestEvidence": {
+      "filePath": "toolkit/v1/run-test-evidence.ts",
+      "sha256": "6ece7bd3319504421acf00127144f7c71fabce4adcab8a5f8ad674dc345af941"
+    },
+    "runE2eTestEvidence": {
+      "filePath": "toolkit/v1/run-e2e-test-evidence.ts",
+      "sha256": "4ce52313b89d6f73edd46345a96285dc420837371c3bc5e8171e0ca9d17d5325"
+    },
+    "mergeTestEvidenceManifests": {
+      "filePath": "toolkit/v1/merge-test-evidence-manifests.ts",
+      "sha256": "353deddcb98958bf3dc65cb001cc46fe0eccea35d55502b607a29239d862e200"
+    }
+  }
+}

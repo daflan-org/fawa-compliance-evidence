@@ -1,0 +1,64 @@
+name: Sign Policy Package
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - "policy/v1/ci.rego"
+      - "policy/version.json"
+      - "scripts/sign-policy-package.ts"
+      - ".github/workflows/sign-policy-package.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  sign_policy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Check signing secret presence
+        id: secret-check
+        env:
+          POLICY_SIGNING_PRIVATE_KEY: ${{ secrets.POLICY_SIGNING_PRIVATE_KEY }}
+        run: |
+          set -euo pipefail
+          if [ -n "${POLICY_SIGNING_PRIVATE_KEY}" ]; then
+            echo "has_secret=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "has_secret=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Explain skipped signing
+        if: ${{ steps.secret-check.outputs.has_secret != 'true' }}
+        run: |
+          echo "POLICY_SIGNING_PRIVATE_KEY is not configured."
+          echo "Policy signing workflow was skipped."
+
+      - name: Sign policy and update manifest
+        if: ${{ steps.secret-check.outputs.has_secret == 'true' }}
+        run: npx --yes tsx scripts/sign-policy-package.ts
+        env:
+          POLICY_SIGNING_PRIVATE_KEY: ${{ secrets.POLICY_SIGNING_PRIVATE_KEY }}
+
+      - name: Commit and push policy package updates
+        if: ${{ steps.secret-check.outputs.has_secret == 'true' }}
+        run: |
+          set -euo pipefail
+          if git diff --quiet && git diff --cached --quiet; then
+            echo "No policy package changes to commit."
+            exit 0
+          fi
+
+          git add policy/version.json policy/v1/ci.rego.sig.base64
+          git -c user.name="github-actions[bot]" -c user.email="41898282+github-actions[bot]@users.noreply.github.com" \
+            commit -m "chore(policy): sign policy package"
+          git push origin HEAD:main

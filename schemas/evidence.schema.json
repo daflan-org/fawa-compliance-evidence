@@ -126,6 +126,132 @@
         }
       }
     },
+    "verification": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "dispatcher",
+        "ciArtifactsValidated",
+        "deployJobsValidated",
+        "sourceRepo",
+        "environment",
+        "ciRunId",
+        "deployRunId"
+      ],
+      "properties": {
+        "dispatcher": { "type": "string", "minLength": 1 },
+        "ciArtifactsValidated": { "type": "boolean" },
+        "deployJobsValidated": { "type": "boolean" },
+        "sourceRepo": { "type": "string", "minLength": 1 },
+        "environment": { "type": "string", "minLength": 1 },
+        "ciRunId": { "type": "string", "minLength": 1 },
+        "deployRunId": { "type": "string", "minLength": 1 }
+      }
+    },
+    "policyPackage": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "version",
+        "filePath",
+        "sha256",
+        "signaturePath",
+        "publicKeyPath",
+        "policyInputSha256",
+        "checksumVerified",
+        "signatureVerified",
+        "sourceUrl"
+      ],
+      "properties": {
+        "version": { "type": "string", "minLength": 1 },
+        "filePath": { "type": "string", "minLength": 1 },
+        "sha256": {
+          "type": "string",
+          "pattern": "^[A-Fa-f0-9]{64}$"
+        },
+        "signaturePath": { "type": "string", "minLength": 1 },
+        "publicKeyPath": { "type": "string", "minLength": 1 },
+        "policyInputSha256": {
+          "type": "string",
+          "pattern": "^[A-Fa-f0-9]{64}$"
+        },
+        "checksumVerified": { "type": "boolean" },
+        "signatureVerified": { "type": "boolean" },
+        "sourceUrl": { "type": "string", "minLength": 1 }
+      }
+    },
+    "deployEvidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "runId",
+        "runNumber",
+        "workflowName",
+        "htmlUrl",
+        "conclusion",
+        "jobs"
+      ],
+      "properties": {
+        "runId": { "type": "string", "minLength": 1 },
+        "runNumber": { "type": "string", "minLength": 1 },
+        "workflowName": { "type": "string", "minLength": 1 },
+        "htmlUrl": { "type": "string", "minLength": 1 },
+        "conclusion": { "type": "string", "minLength": 1 },
+        "jobs": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "name",
+              "status",
+              "conclusion",
+              "startedAt",
+              "completedAt",
+              "htmlUrl"
+            ],
+            "properties": {
+              "name": { "type": "string", "minLength": 1 },
+              "status": { "type": "string", "minLength": 1 },
+              "conclusion": {
+                "anyOf": [
+                  { "type": "string", "minLength": 1 },
+                  { "type": "null" }
+                ]
+              },
+              "startedAt": {
+                "anyOf": [
+                  { "type": "string", "format": "date-time" },
+                  { "type": "null" }
+                ]
+              },
+              "completedAt": {
+                "anyOf": [
+                  { "type": "string", "format": "date-time" },
+                  { "type": "null" }
+                ]
+              },
+              "htmlUrl": { "type": "string", "minLength": 1 }
+            }
+          }
+        }
+      }
+    },
+    "checks": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "name", "status", "expected", "actual"],
+        "properties": {
+          "id": { "type": "string", "minLength": 1 },
+          "name": { "type": "string", "minLength": 1 },
+          "status": { "type": "string", "enum": ["passed", "failed"] },
+          "expected": { "type": "string", "minLength": 1 },
+          "actual": { "type": "string", "minLength": 1 }
+        }
+      }
+    },
     "verificationCommands": {
       "type": "array",
       "items": {

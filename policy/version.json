@@ -1,0 +1,11 @@
+{
+  "version": "1.0.0",
+  "updatedAt": "2026-03-01T00:00:00.000Z",
+  "policy": {
+    "filePath": "policy/v1/ci.rego",
+    "sha256": "9f1390a5bb1f695c9bdc51f0612147dda42adf44db6327685070cc4a79c90353",
+    "signaturePath": "policy/v1/ci.rego.sig.base64",
+    "publicKeyPath": "policy/signing/policy-signing-public.pem",
+    "signatureAlgorithm": "sha256-rsa"
+  }
+}
