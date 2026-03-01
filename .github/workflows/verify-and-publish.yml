@@ -188,6 +188,22 @@ jobs:
           test -f out/test-evidence/compliance-test-evidence-manifest.json
           test -f out/policy/policy-provenance.json
 
+      - name: Validate test evidence schema and assertions
+        run: |
+          set -euo pipefail
+          npx --yes ajv-cli@5.0.0 validate --spec=draft2020 --strict=false \
+            -s schemas/test-evidence-manifest.schema.json \
+            -d out/test-evidence/compliance-test-evidence-manifest.json
+
+          while IFS= read -r artifact_json; do
+            npx --yes ajv-cli@5.0.0 validate --spec=draft2020 --strict=false \
+              -s schemas/test-artifact.schema.json \
+              -d "${artifact_json}"
+          done < <(rg --files out/test-evidence/tests -g '*.json')
+
+          jq -e '.testEvidence | length > 0' out/test-evidence/compliance-test-evidence-manifest.json >/dev/null
+          jq -e '[.testEvidence[].assertions | type == "array" and length > 0] | all' out/test-evidence/compliance-test-evidence-manifest.json >/dev/null
+
       - name: Build evidence payload and deploy metadata
         run: npx --yes tsx scripts/build-evidence.ts
         env:
@@ -195,6 +211,14 @@ jobs:
           TEST_MANIFEST_PATH: out/test-evidence/compliance-test-evidence-manifest.json
           POLICY_PROVENANCE_PATH: out/policy/policy-provenance.json
           CURRENT_DIR: current
+
+      - name: Validate built evidence payload
+        run: |
+          set -euo pipefail
+          npx --yes ajv-cli@5.0.0 validate --spec=draft2020 --strict=false \
+            -s schemas/evidence.schema.json \
+            -d current/evidence.json
+          jq -e '[.testEvidence[].assertions[]?.status == "passed"] | all' current/evidence.json >/dev/null
 
       - name: Publish immutable history snapshot
         run: npx --yes tsx scripts/publish-snapshot.ts

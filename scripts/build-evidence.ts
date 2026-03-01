@@ -1,4 +1,5 @@
 import { execSync } from "node:child_process";
+import { createHash } from "node:crypto";
 import {
   cpSync,
   existsSync,
@@ -10,6 +11,7 @@ import {
 import path from "node:path";
 
 type CheckStatus = "passed" | "failed";
+type AssertionStatus = "passed" | "failed";
 
 interface IngestOutput {
   source: {
@@ -81,6 +83,20 @@ interface PolicyProvenance {
   };
 }
 
+interface TestAssertion {
+  assertionId: string;
+  name: string;
+  status: AssertionStatus;
+  expected: string;
+  actual: string;
+  evidenceRef: {
+    filePath: string;
+    matcherType: "includes" | "regex";
+    matcher: string;
+  };
+  verifiedAt: string;
+}
+
 interface TestEvidenceEntry {
   testId: string;
   sourcePath: string;
@@ -97,10 +113,25 @@ interface TestEvidenceEntry {
     sha256: string;
   }>;
   verificationCommand: string;
+  assertions: TestAssertion[];
 }
 
 interface TestManifest {
   testEvidence?: TestEvidenceEntry[];
+}
+
+interface AssertionSummaryByTest {
+  testId: string;
+  total: number;
+  passed: number;
+  failed: number;
+}
+
+interface AssertionSummary {
+  total: number;
+  passed: number;
+  failed: number;
+  byTest: AssertionSummaryByTest[];
 }
 
 interface VerificationCommand {
@@ -138,6 +169,7 @@ interface EvidencePayload {
     sha: string;
   }>;
   testEvidence: TestEvidenceEntry[];
+  assertionSummary: AssertionSummary;
   verificationCommands: VerificationCommand[];
   limits: string[];
   verification: {
@@ -171,9 +203,20 @@ const testManifestPath: string =
 const policyProvenancePath: string =
   process.env.POLICY_PROVENANCE_PATH ?? "out/policy/policy-provenance.json";
 const currentDir: string = process.env.CURRENT_DIR ?? "current";
+const requiredTestIds = [
+  "permission-analyzer-unit",
+  "ttl-indexes-persistence-unit",
+  "ttl-indexes-api-unit",
+  "device-sync-e2e",
+  "sos-e2e",
+];
 
 function readJson<T>(filePath: string): T {
   return JSON.parse(readFileSync(filePath, "utf-8")) as T;
+}
+
+function sha256File(filePath: string): string {
+  return createHash("sha256").update(readFileSync(filePath)).digest("hex");
 }
 
 function gitBlobSha(filePath: string): string {
@@ -190,6 +233,12 @@ function gitBlobSha(filePath: string): string {
 function ensureFile(filePath: string, label: string): void {
   if (!existsSync(filePath)) {
     throw new Error(`${label} not found at ${filePath}`);
+  }
+}
+
+function ensure(condition: boolean, message: string): void {
+  if (!condition) {
+    throw new Error(message);
   }
 }
 
@@ -230,7 +279,203 @@ function buildVerificationCommands(
   ];
 }
 
-function buildChecks(ingest: IngestOutput): EvidenceCheck[] {
+function resolveLocalArtifactPath(
+  testsDir: string,
+  artifactPath: string,
+): string {
+  if (artifactPath.startsWith("current/tests/")) {
+    return path.join(testsDir, path.basename(artifactPath));
+  }
+  return path.join(path.dirname(testManifestPath), artifactPath);
+}
+
+function validateAssertion(assertion: TestAssertion, context: string): void {
+  ensure(
+    typeof assertion.assertionId === "string" &&
+      assertion.assertionId.length > 0,
+    `${context}: assertionId is required.`,
+  );
+  ensure(
+    typeof assertion.name === "string" && assertion.name.length > 0,
+    `${context}: assertion name is required.`,
+  );
+  ensure(
+    assertion.status === "passed" || assertion.status === "failed",
+    `${context}: assertion status must be passed|failed.`,
+  );
+  ensure(
+    typeof assertion.expected === "string" && assertion.expected.length > 0,
+    `${context}: assertion expected is required.`,
+  );
+  ensure(
+    typeof assertion.actual === "string" && assertion.actual.length > 0,
+    `${context}: assertion actual is required.`,
+  );
+  ensure(
+    typeof assertion.verifiedAt === "string" &&
+      Number.isFinite(Date.parse(assertion.verifiedAt)),
+    `${context}: assertion verifiedAt must be valid datetime.`,
+  );
+  ensure(
+    assertion.evidenceRef !== null &&
+      typeof assertion.evidenceRef === "object" &&
+      typeof assertion.evidenceRef.filePath === "string" &&
+      assertion.evidenceRef.filePath.length > 0 &&
+      (assertion.evidenceRef.matcherType === "includes" ||
+        assertion.evidenceRef.matcherType === "regex") &&
+      typeof assertion.evidenceRef.matcher === "string" &&
+      assertion.evidenceRef.matcher.length > 0,
+    `${context}: assertion evidenceRef is invalid.`,
+  );
+}
+
+function validateAndSummarizeTestEvidence(
+  testEvidence: TestEvidenceEntry[],
+): AssertionSummary {
+  ensure(
+    testEvidence.length > 0,
+    "Test evidence manifest must contain at least one entry.",
+  );
+  const seenTestIds = new Set<string>();
+  const testsDir = path.join(path.dirname(testManifestPath), "tests");
+
+  let totalAssertions = 0;
+  let passedAssertions = 0;
+  let failedAssertions = 0;
+  const byTest: AssertionSummaryByTest[] = [];
+
+  for (const entry of testEvidence) {
+    ensure(
+      typeof entry.testId === "string" && entry.testId.length > 0,
+      "testId is required in test evidence entry.",
+    );
+    ensure(
+      !seenTestIds.has(entry.testId),
+      `Duplicate testId found in test evidence: ${entry.testId}`,
+    );
+    seenTestIds.add(entry.testId);
+    ensure(
+      entry.result === "passed" || entry.result === "failed",
+      `${entry.testId}: result must be passed|failed.`,
+    );
+    ensure(
+      Array.isArray(entry.assertions) && entry.assertions.length > 0,
+      `${entry.testId}: assertions must be a non-empty array.`,
+    );
+    ensure(
+      Array.isArray(entry.artifacts) && entry.artifacts.length > 0,
+      `${entry.testId}: artifacts must be a non-empty array.`,
+    );
+
+    let localPassed = 0;
+    let localFailed = 0;
+    for (const assertion of entry.assertions) {
+      validateAssertion(assertion, `${entry.testId}/${assertion.assertionId}`);
+      totalAssertions += 1;
+      if (assertion.status === "passed") {
+        passedAssertions += 1;
+        localPassed += 1;
+      } else {
+        failedAssertions += 1;
+        localFailed += 1;
+      }
+    }
+
+    ensure(
+      localFailed === 0,
+      `${entry.testId}: at least one assertion failed; verifier rejects publishing.`,
+    );
+    ensure(
+      entry.result === "passed",
+      `${entry.testId}: result is '${entry.result}', expected 'passed'.`,
+    );
+
+    const jsonArtifact = entry.artifacts.find(
+      (artifact) => artifact.format === "json",
+    );
+    ensure(
+      Boolean(jsonArtifact),
+      `${entry.testId}: missing json test artifact.`,
+    );
+
+    for (const artifact of entry.artifacts) {
+      ensure(
+        artifact.format === "json" || artifact.format === "junit",
+        `${entry.testId}: unsupported artifact format.`,
+      );
+      ensure(
+        typeof artifact.path === "string" && artifact.path.length > 0,
+        `${entry.testId}: artifact path is required.`,
+      );
+      ensure(
+        typeof artifact.sha256 === "string" &&
+          /^[A-Fa-f0-9]{64}$/.test(artifact.sha256),
+        `${entry.testId}: artifact sha256 is invalid.`,
+      );
+
+      const artifactLocalPath = resolveLocalArtifactPath(
+        testsDir,
+        artifact.path,
+      );
+      ensure(
+        existsSync(artifactLocalPath),
+        `${entry.testId}: artifact file not found at ${artifactLocalPath}.`,
+      );
+      const actualSha = sha256File(artifactLocalPath);
+      ensure(
+        actualSha === artifact.sha256,
+        `${entry.testId}: sha256 mismatch for ${artifact.path}. expected=${artifact.sha256} actual=${actualSha}`,
+      );
+
+      if (artifact.format === "json") {
+        const artifactPayload = readJson<{
+          testId?: string;
+          result?: "passed" | "failed";
+          assertions?: TestAssertion[];
+        }>(artifactLocalPath);
+        ensure(
+          artifactPayload.testId === entry.testId,
+          `${entry.testId}: json artifact testId mismatch.`,
+        );
+        ensure(
+          artifactPayload.result === entry.result,
+          `${entry.testId}: json artifact result mismatch.`,
+        );
+        ensure(
+          Array.isArray(artifactPayload.assertions) &&
+            artifactPayload.assertions.length > 0,
+          `${entry.testId}: json artifact assertions are missing.`,
+        );
+      }
+    }
+
+    byTest.push({
+      testId: entry.testId,
+      total: entry.assertions.length,
+      passed: localPassed,
+      failed: localFailed,
+    });
+  }
+
+  for (const requiredTestId of requiredTestIds) {
+    ensure(
+      seenTestIds.has(requiredTestId),
+      `Required test evidence is missing: ${requiredTestId}`,
+    );
+  }
+
+  return {
+    total: totalAssertions,
+    passed: passedAssertions,
+    failed: failedAssertions,
+    byTest,
+  };
+}
+
+function buildChecks(
+  ingest: IngestOutput,
+  assertionSummary: AssertionSummary,
+): EvidenceCheck[] {
   const deployCheck: EvidenceCheck = {
     id: "deploy-required-jobs",
     name: "Deploy Required Jobs",
@@ -252,7 +497,18 @@ function buildChecks(ingest: IngestOutput): EvidenceCheck[] {
     actual: `CI run ${ingest.ci.runId} conclusion=${ingest.ci.conclusion}`,
   };
 
-  return [deployCheck, ciCheck];
+  const assertionStatus: CheckStatus =
+    assertionSummary.failed === 0 ? "passed" : "failed";
+  const assertionCheck: EvidenceCheck = {
+    id: "test-assertions",
+    name: "Test Assertions",
+    status: assertionStatus,
+    expected:
+      "All required tests include non-empty assertions and all assertions pass.",
+    actual: `total=${assertionSummary.total}, passed=${assertionSummary.passed}, failed=${assertionSummary.failed}`,
+  };
+
+  return [deployCheck, ciCheck, assertionCheck];
 }
 
 function run(): void {
@@ -269,6 +525,7 @@ function run(): void {
   )
     ? testManifest.testEvidence
     : [];
+  const assertionSummary = validateAndSummarizeTestEvidence(testEvidence);
   const verificationCommands = buildVerificationCommands(ingest);
   const inputBuilderPath =
     policyProvenance.toolkit?.command ??
@@ -309,11 +566,13 @@ function run(): void {
       },
     ],
     testEvidence,
+    assertionSummary,
     verificationCommands,
     limits: [
       "Evidence includes sanitized verification metadata and immutable links only.",
       "Operational secrets and sensitive runtime details are intentionally excluded.",
       "Runtime policy is fetched from public package and verified via checksum + detached signature.",
+      "Assertion payloads are source-derived proof points; runtime DB drift is out of scope for this phase.",
     ],
     verification: {
       dispatcher: "repository_dispatch",
@@ -340,7 +599,7 @@ function run(): void {
       sourceUrl: policyProvenance.sourceUrl,
     },
     deployEvidence: ingest.deploy,
-    checks: buildChecks(ingest),
+    checks: buildChecks(ingest, assertionSummary),
   };
 
   mkdirSync(currentDir, { recursive: true });

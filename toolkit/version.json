@@ -1,9 +1,9 @@
 {
-  "version": "1.0.0",
-  "updatedAt": "2026-03-01T00:00:00.000Z",
+  "version": "1.1.0",
+  "updatedAt": "2026-03-01T04:20:00.000Z",
   "npmPackage": {
     "name": "@daflan-org/falcon-compliance-toolkit",
-    "version": "1.0.0",
+    "version": "1.1.0",
     "registry": "https://npm.pkg.github.com"
   },
   "integrityAlgorithm": "sha256",
@@ -14,15 +14,19 @@
     },
     "runTestEvidence": {
       "filePath": "toolkit/v1/run-test-evidence.ts",
-      "sha256": "6ece7bd3319504421acf00127144f7c71fabce4adcab8a5f8ad674dc345af941"
+      "sha256": "9bc818745297092dd47fa495ee951c85099e7093ce1c45ca0b34295d749d934c"
     },
     "runE2eTestEvidence": {
       "filePath": "toolkit/v1/run-e2e-test-evidence.ts",
-      "sha256": "4ce52313b89d6f73edd46345a96285dc420837371c3bc5e8171e0ca9d17d5325"
+      "sha256": "88d05c40b40b4e237f3be6aa8a86d551101522532618ad64d51c42786c5350df"
     },
     "mergeTestEvidenceManifests": {
       "filePath": "toolkit/v1/merge-test-evidence-manifests.ts",
-      "sha256": "353deddcb98958bf3dc65cb001cc46fe0eccea35d55502b607a29239d862e200"
+      "sha256": "1ef346a5d66e700ac1a6325e47d1d3e2924663c3682e43bca29b8da6d09be167"
+    },
+    "validateTestEvidence": {
+      "filePath": "toolkit/v1/validate-test-evidence.ts",
+      "sha256": "ba875bef2d9b84234941d2e901e65447c5c78e2865d0ebd3f579d201b031e2b7"
     }
   }
 }

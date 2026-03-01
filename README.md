@@ -34,6 +34,8 @@ flowchart LR
 ## Repository Layout
 
 - `schemas/evidence.schema.json`: canonical schema for `current/evidence.json`.
+- `schemas/test-evidence-manifest.schema.json`: schema for Falcon CI compliance manifest artifact.
+- `schemas/test-artifact.schema.json`: schema for sanitized `current/tests/*.json` artifacts.
 - `policy/version.json`: public policy package manifest consumed by Falcon CI.
 - `policy/v1/ci.rego`: policy file referenced by the manifest.
 - `toolkit/package/`: source for published npm package `@daflan-org/falcon-compliance-toolkit`.
@@ -47,6 +49,24 @@ flowchart LR
 - `scripts/verify-current.sh`: one-command public verification script.
 - `.github/workflows/verify-and-publish.yml`: dispatch-driven verifier/publisher workflow.
 - `.github/workflows/sign-policy-package.yml`: secret-backed policy signing workflow.
+
+## Assertion Evidence Model
+
+Each test entry in `current/evidence.json` includes machine-verifiable assertions:
+
+- `testEvidence[].assertions[].assertionId`
+- `testEvidence[].assertions[].status` (`passed|failed`)
+- `testEvidence[].assertions[].expected`
+- `testEvidence[].assertions[].actual`
+- `testEvidence[].assertions[].evidenceRef` (`filePath`, `matcherType`, `matcher`)
+- `assertionSummary` (aggregate counts across all tests)
+
+Verifier workflow gates publish on these checks:
+
+- Manifest schema validation
+- Test artifact schema validation
+- Non-empty assertions for each required test
+- No failed assertions
 
 ## Dispatch Contract
 
@@ -113,7 +133,7 @@ Toolkit package is published to GitHub Packages as:
 Local usage example:
 
 ```bash
-npx --yes @daflan-org/falcon-compliance-toolkit@1.0.0 build-policy-input
+npx --yes @daflan-org/falcon-compliance-toolkit@1.1.0 build-policy-input
 ```
 
 ## Public Verification
@@ -123,6 +143,13 @@ Run the full public verification flow:
 ```bash
 curl -fsSL "https://raw.githubusercontent.com/daflan-org/fawa-compliance-evidence/main/scripts/verify-current.sh" | bash
 ```
+
+What this verifies:
+
+- `current/evidence.json` matches `schemas/evidence.schema.json`
+- each `current/tests/*.json` artifact matches `schemas/test-artifact.schema.json`
+- artifact SHA256 values match `evidence.json`
+- all assertion statuses are `passed`
 
 Optional cosign verification (if `cosign` is installed):
 

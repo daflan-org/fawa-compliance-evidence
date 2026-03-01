@@ -3,6 +3,7 @@ set -euo pipefail
 
 EVIDENCE_URL="${EVIDENCE_URL:-https://raw.githubusercontent.com/daflan-org/fawa-compliance-evidence/main/current/evidence.json}"
 SCHEMA_URL="${SCHEMA_URL:-https://raw.githubusercontent.com/daflan-org/fawa-compliance-evidence/main/schemas/evidence.schema.json}"
+TEST_ARTIFACT_SCHEMA_URL="${TEST_ARTIFACT_SCHEMA_URL:-https://raw.githubusercontent.com/daflan-org/fawa-compliance-evidence/main/schemas/test-artifact.schema.json}"
 RAW_BASE_URL="${RAW_BASE_URL:-https://raw.githubusercontent.com/daflan-org/fawa-compliance-evidence/main}"
 RUN_COSIGN="${RUN_COSIGN:-0}"
 
@@ -12,13 +13,23 @@ trap 'rm -rf "${WORK_DIR}"' EXIT
 echo "Downloading evidence payload..."
 curl -fsSL "${EVIDENCE_URL}" -o "${WORK_DIR}/evidence.json"
 curl -fsSL "${SCHEMA_URL}" -o "${WORK_DIR}/evidence.schema.json"
+curl -fsSL "${TEST_ARTIFACT_SCHEMA_URL}" -o "${WORK_DIR}/test-artifact.schema.json"
 
-echo "Checking required top-level fields..."
-jq -e '.schemaVersion == "1.0.0"' "${WORK_DIR}/evidence.json" >/dev/null
-jq -e '.source.owner and .source.repo and .source.ref and .source.commitSha' "${WORK_DIR}/evidence.json" >/dev/null
-jq -e '.testEvidence | type == "array"' "${WORK_DIR}/evidence.json" >/dev/null
-jq -e '.documents | type == "array"' "${WORK_DIR}/evidence.json" >/dev/null
-jq -e '.verificationCommands | type == "array"' "${WORK_DIR}/evidence.json" >/dev/null
+if ! command -v npx >/dev/null 2>&1; then
+  echo "npx is required for JSON schema validation."
+  exit 1
+fi
+
+echo "Validating evidence payload against JSON schema..."
+npx --yes ajv-cli@5.0.0 validate --spec=draft2020 --strict=false \
+  -s "${WORK_DIR}/evidence.schema.json" \
+  -d "${WORK_DIR}/evidence.json"
+
+echo "Checking assertion completeness..."
+jq -e '.testEvidence | type == "array" and length > 0' "${WORK_DIR}/evidence.json" >/dev/null
+jq -e '[.testEvidence[].assertions | type == "array" and length > 0] | all' "${WORK_DIR}/evidence.json" >/dev/null
+jq -e '[.testEvidence[].assertions[].status == "passed"] | all' "${WORK_DIR}/evidence.json" >/dev/null
+jq -e '.assertionSummary.total >= .assertionSummary.passed and .assertionSummary.failed == 0' "${WORK_DIR}/evidence.json" >/dev/null
 
 echo "Verifying test evidence artifacts by SHA256..."
 while IFS=$'\t' read -r artifact_path artifact_sha; do
@@ -29,6 +40,12 @@ while IFS=$'\t' read -r artifact_path artifact_sha; do
   artifact_target="${WORK_DIR}/$(basename "${artifact_path}")"
   curl -fsSL "${artifact_url}" -o "${artifact_target}"
   echo "${artifact_sha}  ${artifact_target}" | shasum -a 256 -c -
+  if [[ "${artifact_path}" == current/tests/*.json ]]; then
+    npx --yes ajv-cli@5.0.0 validate --spec=draft2020 --strict=false \
+      -s "${WORK_DIR}/test-artifact.schema.json" \
+      -d "${artifact_target}"
+    jq -e '.assertions | type == "array" and length > 0 and ([.[]?.status == "passed"] | all)' "${artifact_target}" >/dev/null
+  fi
 done < <(jq -r '.testEvidence[]? | .artifacts[]? | [.path, .sha256] | @tsv' "${WORK_DIR}/evidence.json")
 
 echo "Verifying public policy package checksum..."

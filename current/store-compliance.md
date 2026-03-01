@@ -52,40 +52,53 @@ Public verifiable test kaniti:
 - Public payload: `https://raw.githubusercontent.com/daflan-org/fawa-compliance-evidence/main/current/evidence.json`
 - Public sanitize raporlar: `https://raw.githubusercontent.com/daflan-org/fawa-compliance-evidence/main/current/tests/`
 
-Ornek dogrulama:
+Ornek dogrulama (artifact hash + assertion):
 
 ```bash
 curl -fsSL "https://raw.githubusercontent.com/daflan-org/fawa-compliance-evidence/main/current/evidence.json" \
   -o /tmp/evidence.json
 
-node -e 'const fs=require("fs");const e=JSON.parse(fs.readFileSync("/tmp/evidence.json","utf8"));const t=e.testEvidence.find(x=>x.testId==="ttl-indexes-persistence-unit");if(!t)throw new Error("test not found");const a=t.artifacts.find(x=>x.format==="json");console.log(a.path,a.sha256);'
+node -e 'const fs=require("fs");const e=JSON.parse(fs.readFileSync("/tmp/evidence.json","utf8"));const t=e.testEvidence.find(x=>x.testId==="ttl-indexes-persistence-unit");if(!t)throw new Error("test not found");if(!Array.isArray(t.assertions)||t.assertions.length===0)throw new Error("assertions missing");const a=t.artifacts.find(x=>x.format==="json");if(!a)throw new Error("json artifact missing");console.log(a.path,a.sha256);'
 
 curl -fsSL "https://raw.githubusercontent.com/daflan-org/fawa-compliance-evidence/main/current/tests/ttl-indexes-persistence-unit.json" \
   -o /tmp/ttl-indexes-persistence-unit.json
 
 echo "<artifact_sha256_from_evidence_json>  /tmp/ttl-indexes-persistence-unit.json" | shasum -a 256 -c -
+
+jq -e '.testId=="ttl-indexes-persistence-unit" and (.assertions|length>0) and ([.assertions[].status=="passed"]|all)' \
+  /tmp/ttl-indexes-persistence-unit.json >/dev/null
+
+jq -e '.assertions[] | select(.assertionId=="location-records-ttl-30d" and .status=="passed")' \
+  /tmp/ttl-indexes-persistence-unit.json >/dev/null
 ```
 
 Cross-check:
 
 - `evidence.json` icindeki `runId`, `jobName`, `sourceCommitSha` alanlarini CI run detayi ile karsilastirin.
+- `assertionSummary.failed == 0` oldugunu kontrol edin.
 
 ## 4) Policy-as-Code Evidence (OPA/Conftest)
 
 - Workflow: `.github/workflows/ci-tests.yml`
-- Policy dosyasi: `policy/repo/ci.rego`
-- Input olusturma: `scripts/policy/build-policy-input.ts`
+- Policy package manifest: `https://raw.githubusercontent.com/daflan-org/fawa-compliance-evidence/main/policy/version.json`
+- Policy dosyasi: `https://raw.githubusercontent.com/daflan-org/fawa-compliance-evidence/main/policy/v1/ci.rego`
+- Toolkit npm package: `@daflan-org/falcon-compliance-toolkit`
+- Toolkit command: `falcon-compliance-toolkit build-policy-input`
+- Toolkit registry: `https://npm.pkg.github.com`
 - Artifact: `policy-input-<run_id>`
 
 Lokal dogrulama:
 
 ```bash
-CHANGED_FILES_JSON='["packages/socket-contracts/src/app-events.ts"]' \
-GITHUB_REF_NAME='daf-418-store-compliance-backend-evidence-for-daf-307' \
-GITHUB_EVENT_NAME='pull_request' \
-yarn policy:build-input
+export CHANGED_FILES_JSON='["packages/socket-contracts/src/app-events.ts"]'
+export GITHUB_REF_NAME='daf-418-store-compliance-backend-evidence-for-daf-307'
+export GITHUB_EVENT_NAME='pull_request'
 
-conftest test policy-input.json -p policy/repo
+curl -fsSL "https://raw.githubusercontent.com/daflan-org/fawa-compliance-evidence/main/policy/version.json" -o /tmp/policy-version.json
+curl -fsSL "https://raw.githubusercontent.com/daflan-org/fawa-compliance-evidence/main/policy/v1/ci.rego" -o /tmp/ci.rego
+npx --yes @daflan-org/falcon-compliance-toolkit@1.1.0 build-policy-input
+
+conftest test policy-input.json -p /tmp
 ```
 
 ## 5) Signed Attestation Evidence (cosign)

@@ -9,3 +9,4 @@ ureten komut satiri araci.
 - `falcon-compliance-toolkit run-test-evidence`
 - `falcon-compliance-toolkit run-e2e-test-evidence`
 - `falcon-compliance-toolkit merge-test-evidence-manifests`
+- `falcon-compliance-toolkit validate-test-evidence`
