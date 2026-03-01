@@ -1,0 +1,7 @@
+{
+  "testId": "permission-analyzer-unit",
+  "sourcePath": "packages/domain/src/device/services/permission-analyzer.service.spec.ts",
+  "suiteType": "unit",
+  "result": "passed",
+  "executedAt": "2026-03-01T00:04:20.725Z"
+}
