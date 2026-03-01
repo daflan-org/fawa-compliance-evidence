@@ -67,6 +67,10 @@ interface PolicyProvenance {
       filePath?: string;
       sha256?: string;
     };
+    packageName?: string;
+    packageVersion?: string;
+    command?: string;
+    registry?: string;
     sourceUrl?: string;
   };
   policyInputSha256: string;
@@ -267,8 +271,9 @@ function run(): void {
     : [];
   const verificationCommands = buildVerificationCommands(ingest);
   const inputBuilderPath =
+    policyProvenance.toolkit?.command ??
     policyProvenance.toolkit?.buildPolicyInput?.filePath ??
-    "toolkit/v1/build-policy-input.ts";
+    "falcon-compliance-toolkit build-policy-input";
 
   const evidence: EvidencePayload = {
     schemaVersion: "1.0.0",

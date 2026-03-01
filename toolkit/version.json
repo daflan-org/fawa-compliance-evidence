@@ -1,6 +1,11 @@
 {
   "version": "1.0.0",
   "updatedAt": "2026-03-01T00:00:00.000Z",
+  "npmPackage": {
+    "name": "@daflan-org/falcon-compliance-toolkit",
+    "version": "1.0.0",
+    "registry": "https://npm.pkg.github.com"
+  },
   "integrityAlgorithm": "sha256",
   "scripts": {
     "buildPolicyInput": {

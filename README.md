@@ -36,8 +36,9 @@ flowchart LR
 - `schemas/evidence.schema.json`: canonical schema for `current/evidence.json`.
 - `policy/version.json`: public policy package manifest consumed by Falcon CI.
 - `policy/v1/ci.rego`: policy file referenced by the manifest.
-- `toolkit/version.json`: public CI evidence toolkit manifest consumed by Falcon CI.
-- `toolkit/v1/*.ts`: versioned toolkit scripts (`build-policy-input`, `run-test-evidence`, `run-e2e-test-evidence`, `merge-test-evidence-manifests`).
+- `toolkit/package/`: source for published npm package `@daflan-org/falcon-compliance-toolkit`.
+- `.github/workflows/publish-toolkit-package.yml`: publishes toolkit package to GitHub Packages.
+- `toolkit/version.json` and `toolkit/v1/*.ts`: public source transparency for toolkit logic.
 - `current/evidence.json`: latest verified evidence payload.
 - `current/deploy-run.json`: normalized deploy job metadata.
 - `current/tests/*.json|*.junit.xml`: sanitized test artifacts copied from Falcon CI artifacts.
@@ -82,10 +83,26 @@ Falcon sends `repository_dispatch` with `event_type=falcon-deploy-verified` and 
 
 - `POLICY_SIGNING_PRIVATE_KEY` (PEM private key, escaped with `\n` in GitHub secret)
 
+`publish-toolkit-package.yml` uses:
+
+- `GITHUB_TOKEN` (built-in, requires `packages: write` permission in workflow)
+
 GitHub App minimum permissions:
 
 - On `panalgin/falcon`: `Actions: Read`, `Contents: Read`
 - On `daflan-org/fawa-compliance-evidence`: `Contents: Write`
+
+## Toolkit Package
+
+Toolkit package is published to GitHub Packages as:
+
+- `@daflan-org/falcon-compliance-toolkit`
+
+Local usage example:
+
+```bash
+npx --yes @daflan-org/falcon-compliance-toolkit@1.0.0 build-policy-input
+```
 
 ## Public Verification
 

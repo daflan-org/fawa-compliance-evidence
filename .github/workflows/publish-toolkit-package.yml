@@ -1,0 +1,65 @@
+name: Publish Toolkit Package
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - "toolkit/package/**"
+      - ".github/workflows/publish-toolkit-package.yml"
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  publish_toolkit:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: toolkit/package
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js for GitHub Packages
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          registry-url: "https://npm.pkg.github.com"
+          scope: "@daflan-org"
+
+      - name: Install package dependencies
+        run: npm ci
+
+      - name: Build package
+        run: npm run build
+
+      - name: Detect package version existence
+        id: version-check
+        run: |
+          set -euo pipefail
+          PACKAGE_NAME="$(node -p "require('./package.json').name")"
+          PACKAGE_VERSION="$(node -p "require('./package.json').version")"
+          echo "package_name=${PACKAGE_NAME}" >> "$GITHUB_OUTPUT"
+          echo "package_version=${PACKAGE_VERSION}" >> "$GITHUB_OUTPUT"
+
+          if npm view "${PACKAGE_NAME}@${PACKAGE_VERSION}" version --registry "https://npm.pkg.github.com" >/dev/null 2>&1; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          fi
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Skip publish if version already exists
+        if: ${{ steps.version-check.outputs.exists == 'true' }}
+        run: |
+          echo "Package version already published:"
+          echo "${{ steps.version-check.outputs.package_name }}@${{ steps.version-check.outputs.package_version }}"
+
+      - name: Publish package to GitHub Packages
+        if: ${{ steps.version-check.outputs.exists != 'true' }}
+        run: npm publish --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
