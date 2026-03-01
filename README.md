@@ -55,20 +55,32 @@ Falcon sends `repository_dispatch` with `event_type=falcon-deploy-verified` and 
 ```json
 {
   "schema_version": "1.0.0",
-  "source_repo": "panalgin/falcon",
-  "source_ref": "pre-prod",
-  "source_sha": "<commit_sha>",
+  "source": {
+    "repo": "panalgin/falcon",
+    "ref": "pre-prod",
+    "sha": "<commit_sha>"
+  },
   "environment": "pre-prod|prod",
-  "ci_run_id": "<run_id>",
-  "ci_artifact_name": "compliance-test-evidence-<run_id>",
-  "policy_artifact_name": "policy-provenance-<run_id>",
-  "deploy_run_id": "<run_id>",
-  "deploy_workflow_name": "<workflow_name>",
-  "deploy_run_number": "<run_number>",
-  "api_image": "ghcr.io/<owner>/<api_image>",
-  "api_digest": "sha256:<digest>",
-  "worker_image": "ghcr.io/<owner>/<worker_image>",
-  "worker_digest": "sha256:<digest>"
+  "ci": {
+    "run_id": "<run_id>",
+    "artifact_name": "compliance-test-evidence-<run_id>",
+    "policy_artifact_name": "policy-provenance-<run_id>"
+  },
+  "deploy": {
+    "run_id": "<run_id>",
+    "workflow_name": "<workflow_name>",
+    "run_number": "<run_number>"
+  },
+  "images": {
+    "api": {
+      "image": "ghcr.io/<owner>/<api_image>",
+      "digest": "sha256:<digest>"
+    },
+    "worker": {
+      "image": "ghcr.io/<owner>/<worker_image>",
+      "digest": "sha256:<digest>"
+    }
+  }
 }
 ```
 

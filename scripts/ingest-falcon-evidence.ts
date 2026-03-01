@@ -129,22 +129,60 @@ function assertString(payload: JsonObject, key: string): string {
   return value.trim();
 }
 
+function asObject(value: unknown): JsonObject | null {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) {
+    return null;
+  }
+  return value as JsonObject;
+}
+
 function parseDispatchPayload(raw: JsonObject): DispatchPayload {
+  const source = asObject(raw.source);
+  const ci = asObject(raw.ci);
+  const deploy = asObject(raw.deploy);
+  const images = asObject(raw.images);
+  const api = asObject(images?.api);
+  const worker = asObject(images?.worker);
+
   return {
-    source_repo: assertString(raw, "source_repo"),
-    source_ref: assertString(raw, "source_ref"),
-    source_sha: assertString(raw, "source_sha"),
+    source_repo: source
+      ? assertString(source, "repo")
+      : assertString(raw, "source_repo"),
+    source_ref: source
+      ? assertString(source, "ref")
+      : assertString(raw, "source_ref"),
+    source_sha: source
+      ? assertString(source, "sha")
+      : assertString(raw, "source_sha"),
     environment: assertString(raw, "environment"),
-    ci_run_id: assertString(raw, "ci_run_id"),
-    ci_artifact_name: assertString(raw, "ci_artifact_name"),
-    policy_artifact_name: assertString(raw, "policy_artifact_name"),
-    deploy_run_id: assertString(raw, "deploy_run_id"),
-    deploy_workflow_name: assertString(raw, "deploy_workflow_name"),
-    deploy_run_number: assertString(raw, "deploy_run_number"),
-    api_image: assertString(raw, "api_image"),
-    api_digest: assertString(raw, "api_digest"),
-    worker_image: assertString(raw, "worker_image"),
-    worker_digest: assertString(raw, "worker_digest"),
+    ci_run_id: ci ? assertString(ci, "run_id") : assertString(raw, "ci_run_id"),
+    ci_artifact_name: ci
+      ? assertString(ci, "artifact_name")
+      : assertString(raw, "ci_artifact_name"),
+    policy_artifact_name: ci
+      ? assertString(ci, "policy_artifact_name")
+      : assertString(raw, "policy_artifact_name"),
+    deploy_run_id: deploy
+      ? assertString(deploy, "run_id")
+      : assertString(raw, "deploy_run_id"),
+    deploy_workflow_name: deploy
+      ? assertString(deploy, "workflow_name")
+      : assertString(raw, "deploy_workflow_name"),
+    deploy_run_number: deploy
+      ? assertString(deploy, "run_number")
+      : assertString(raw, "deploy_run_number"),
+    api_image: api
+      ? assertString(api, "image")
+      : assertString(raw, "api_image"),
+    api_digest: api
+      ? assertString(api, "digest")
+      : assertString(raw, "api_digest"),
+    worker_image: worker
+      ? assertString(worker, "image")
+      : assertString(raw, "worker_image"),
+    worker_digest: worker
+      ? assertString(worker, "digest")
+      : assertString(raw, "worker_digest"),
   };
 }
 

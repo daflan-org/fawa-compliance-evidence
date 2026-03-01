@@ -67,7 +67,7 @@ permissions:
   actions: read
 
 concurrency:
-  group: verify-${{ github.event_name == 'repository_dispatch' && github.event.client_payload.deploy_run_id || github.event.inputs.deploy_run_id || github.run_id }}
+  group: verify-${{ github.event_name == 'repository_dispatch' && (github.event.client_payload.deploy.run_id || github.event.client_payload.deploy_run_id) || github.event.inputs.deploy_run_id || github.run_id }}
   cancel-in-progress: false
 
 jobs:
@@ -92,6 +92,7 @@ jobs:
           EOF
           else
             jq -n \
+              --arg schema_version "1.0.0" \
               --arg source_repo "${{ github.event.inputs.source_repo }}" \
               --arg source_ref "${{ github.event.inputs.source_ref }}" \
               --arg source_sha "${{ github.event.inputs.source_sha }}" \
@@ -107,20 +108,33 @@ jobs:
               --arg worker_image "${{ github.event.inputs.worker_image }}" \
               --arg worker_digest "${{ github.event.inputs.worker_digest }}" \
               '{
-                source_repo: $source_repo,
-                source_ref: $source_ref,
-                source_sha: $source_sha,
+                schema_version: $schema_version,
+                source: {
+                  repo: $source_repo,
+                  ref: $source_ref,
+                  sha: $source_sha
+                },
                 environment: $environment,
-                ci_run_id: $ci_run_id,
-                ci_artifact_name: $ci_artifact_name,
-                policy_artifact_name: $policy_artifact_name,
-                deploy_run_id: $deploy_run_id,
-                deploy_workflow_name: $deploy_workflow_name,
-                deploy_run_number: $deploy_run_number,
-                api_image: $api_image,
-                api_digest: $api_digest,
-                worker_image: $worker_image,
-                worker_digest: $worker_digest
+                ci: {
+                  run_id: $ci_run_id,
+                  artifact_name: $ci_artifact_name,
+                  policy_artifact_name: $policy_artifact_name
+                },
+                deploy: {
+                  run_id: $deploy_run_id,
+                  workflow_name: $deploy_workflow_name,
+                  run_number: $deploy_run_number
+                },
+                images: {
+                  api: {
+                    image: $api_image,
+                    digest: $api_digest
+                  },
+                  worker: {
+                    image: $worker_image,
+                    digest: $worker_digest
+                  }
+                }
               }' > out/dispatch/payload.json
           fi
           jq . out/dispatch/payload.json
@@ -129,10 +143,10 @@ jobs:
         id: payload
         run: |
           set -euo pipefail
-          echo "source_sha=$(jq -r '.source_sha' out/dispatch/payload.json)" >> "$GITHUB_OUTPUT"
-          echo "ci_run_id=$(jq -r '.ci_run_id' out/dispatch/payload.json)" >> "$GITHUB_OUTPUT"
-          echo "ci_artifact_name=$(jq -r '.ci_artifact_name' out/dispatch/payload.json)" >> "$GITHUB_OUTPUT"
-          echo "policy_artifact_name=$(jq -r '.policy_artifact_name' out/dispatch/payload.json)" >> "$GITHUB_OUTPUT"
+          echo "source_sha=$(jq -r '.source.sha // .source_sha' out/dispatch/payload.json)" >> "$GITHUB_OUTPUT"
+          echo "ci_run_id=$(jq -r '.ci.run_id // .ci_run_id' out/dispatch/payload.json)" >> "$GITHUB_OUTPUT"
+          echo "ci_artifact_name=$(jq -r '.ci.artifact_name // .ci_artifact_name' out/dispatch/payload.json)" >> "$GITHUB_OUTPUT"
+          echo "policy_artifact_name=$(jq -r '.ci.policy_artifact_name // .policy_artifact_name' out/dispatch/payload.json)" >> "$GITHUB_OUTPUT"
 
       - name: Create GitHub App token for Falcon
         id: falcon-token
