@@ -1,0 +1,7 @@
+{
+  "testId": "ttl-indexes-persistence-unit",
+  "sourcePath": "packages/persistence/src/mongoose/ttl-indexes.spec.ts",
+  "suiteType": "unit",
+  "result": "passed",
+  "executedAt": "2026-03-01T00:04:20.726Z"
+}

@@ -1,0 +1,8 @@
+{
+  "testId": "sos-e2e",
+  "sourcePath": "apps/api/test/sos.e2e.spec.ts",
+  "suiteType": "e2e",
+  "result": "passed",
+  "executedAt": "2026-02-28T21:51:51.045Z",
+  "source": "integration_e2e_job"
+}

@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="device-sync-e2e" tests="1" failures="0" errors="0" skipped="0" time="0">
+  <testcase classname="e2e" name="apps/api/test/device-sync.e2e.spec.ts" />
+</testsuite>

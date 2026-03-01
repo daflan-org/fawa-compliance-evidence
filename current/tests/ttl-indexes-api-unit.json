@@ -1,0 +1,7 @@
+{
+  "testId": "ttl-indexes-api-unit",
+  "sourcePath": "apps/api/src/schemas/ttl-indexes.spec.ts",
+  "suiteType": "unit",
+  "result": "passed",
+  "executedAt": "2026-03-01T00:04:20.726Z"
+}

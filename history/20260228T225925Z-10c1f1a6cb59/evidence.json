@@ -1,0 +1,62 @@
+{
+  "schemaVersion": "1.0.0",
+  "generatedAt": "2026-02-28T22:59:24.456Z",
+  "source": {
+    "owner": "panalgin",
+    "repo": "falcon",
+    "ref": "pre-prod",
+    "commitSha": "10c1f1a6cb592c05d0db53b904455eddb6b0baa9"
+  },
+  "policyStatus": {
+    "provider": "OPA + Conftest",
+    "workflowPath": ".github/workflows/ci-tests.yml",
+    "policyPath": "policy/repo/ci.rego",
+    "inputBuilderPath": "scripts/policy/build-policy-input.ts"
+  },
+  "attestationStatus": {
+    "provider": "Sigstore Cosign",
+    "workflowPaths": [
+      ".github/workflows/deploy-preprod.yml",
+      ".github/workflows/deploy-prod.yml",
+      ".github/workflows/deploy-worker-preprod.yml",
+      ".github/workflows/deploy-worker-prod.yml"
+    ]
+  },
+  "documents": [
+    {
+      "key": "trustCompliance",
+      "title": "Trust And Compliance Evidence",
+      "path": "current/trust-evidence.md",
+      "url": "https://raw.githubusercontent.com/daflan-org/fawa-compliance-evidence/main/current/trust-evidence.md",
+      "sha": "017c5935e47b2e7ea912efd30c1ec330b0cb9547"
+    },
+    {
+      "key": "storeCompliance",
+      "title": "Store Compliance Backend Evidence DAF-418",
+      "path": "current/store-compliance.md",
+      "url": "https://raw.githubusercontent.com/daflan-org/fawa-compliance-evidence/main/current/store-compliance.md",
+      "sha": "e93451ba6b356051e75bd506af43512b1cbd4bcc"
+    }
+  ],
+  "testEvidence": [],
+  "verificationCommands": [
+    {
+      "label": "Verify container signature",
+      "command": "cosign verify ghcr.io/<org>/<image>@sha256:<digest> --certificate-identity-regexp \"https://github.com/<org>/falcon/.github/workflows/.*\" --certificate-oidc-issuer \"https://token.actions.githubusercontent.com\""
+    },
+    {
+      "label": "Verify container attestation",
+      "command": "cosign verify-attestation ghcr.io/<org>/<image>@sha256:<digest> --certificate-identity-regexp \"https://github.com/<org>/falcon/.github/workflows/.*\" --certificate-oidc-issuer \"https://token.actions.githubusercontent.com\""
+    },
+    {
+      "label": "Run local policy checks",
+      "command": "CHANGED_FILES_JSON='[\"packages/socket-contracts/src/app-events.ts\"]' GITHUB_REF_NAME='daf-418-store-compliance-backend-evidence-for-daf-307' GITHUB_EVENT_NAME='pull_request' yarn policy:build-input && conftest test policy-input.json -p policy/repo"
+    }
+  ],
+  "limits": [
+    "Evidence summary only includes verification metadata and source links.",
+    "Operational secrets and sensitive runtime details are intentionally excluded.",
+    "TTL behavior is asynchronous by design; deletion timing is not guaranteed instantly.",
+    "Compliance test evidence manifest was not found for this build context."
+  ]
+}

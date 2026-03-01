@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="ttl-indexes-api-unit" tests="1" failures="0" errors="0" skipped="0" time="0">
+  <testcase classname="unit" name="apps/api/src/schemas/ttl-indexes.spec.ts" />
+</testsuite>

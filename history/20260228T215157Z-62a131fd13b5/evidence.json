@@ -1,0 +1,110 @@
+{
+  "schemaVersion": "1.0.0",
+  "generatedAt": "2026-02-28T21:51:55.232Z",
+  "source": {
+    "owner": "panalgin",
+    "repo": "falcon",
+    "ref": "pre-prod",
+    "commitSha": "62a131fd13b542a73a2fca74604945309527a946"
+  },
+  "policyStatus": {
+    "provider": "OPA + Conftest",
+    "workflowPath": ".github/workflows/ci-tests.yml",
+    "policyPath": "policy/repo/ci.rego",
+    "inputBuilderPath": "scripts/policy/build-policy-input.ts"
+  },
+  "attestationStatus": {
+    "provider": "Sigstore Cosign",
+    "workflowPaths": [
+      ".github/workflows/deploy-preprod.yml",
+      ".github/workflows/deploy-prod.yml",
+      ".github/workflows/deploy-worker-preprod.yml",
+      ".github/workflows/deploy-worker-prod.yml"
+    ]
+  },
+  "documents": [
+    {
+      "key": "trustCompliance",
+      "title": "Trust And Compliance Evidence",
+      "path": "current/trust-evidence.md",
+      "url": "https://raw.githubusercontent.com/daflan-org/fawa-compliance-evidence/main/current/trust-evidence.md",
+      "sha": "017c5935e47b2e7ea912efd30c1ec330b0cb9547"
+    },
+    {
+      "key": "storeCompliance",
+      "title": "Store Compliance Backend Evidence DAF-418",
+      "path": "current/store-compliance.md",
+      "url": "https://raw.githubusercontent.com/daflan-org/fawa-compliance-evidence/main/current/store-compliance.md",
+      "sha": "e93451ba6b356051e75bd506af43512b1cbd4bcc"
+    }
+  ],
+  "testEvidence": [
+    {
+      "testId": "device-sync-e2e",
+      "sourcePath": "apps/api/test/device-sync.e2e.spec.ts",
+      "suiteType": "e2e",
+      "result": "passed",
+      "workflowPath": ".github/workflows/ci-tests.yml",
+      "runId": "22529768544",
+      "jobName": "Integration And E2E Tests",
+      "sourceCommitSha": "62a131fd13b542a73a2fca74604945309527a946",
+      "executedAt": "2026-02-28T21:51:51.044Z",
+      "artifacts": [
+        {
+          "format": "json",
+          "path": "current/tests/device-sync-e2e.json",
+          "sha256": "594956a80fc1d5c12233a52652f1114327507ff21d919518c5741d11bf2b4ef5"
+        },
+        {
+          "format": "junit",
+          "path": "current/tests/device-sync-e2e.junit.xml",
+          "sha256": "8ce690ba2847c4c341e17b751118c1d86a03ec7e5427a762a8a73b53f12048d2"
+        }
+      ],
+      "verificationCommand": "curl -fsSL \"https://raw.githubusercontent.com/daflan-org/fawa-compliance-evidence/main/current/tests/device-sync-e2e.json\" -o /tmp/device-sync-e2e.json && echo \"594956a80fc1d5c12233a52652f1114327507ff21d919518c5741d11bf2b4ef5  /tmp/device-sync-e2e.json\" | shasum -a 256 -c -"
+    },
+    {
+      "testId": "sos-e2e",
+      "sourcePath": "apps/api/test/sos.e2e.spec.ts",
+      "suiteType": "e2e",
+      "result": "passed",
+      "workflowPath": ".github/workflows/ci-tests.yml",
+      "runId": "22529768544",
+      "jobName": "Integration And E2E Tests",
+      "sourceCommitSha": "62a131fd13b542a73a2fca74604945309527a946",
+      "executedAt": "2026-02-28T21:51:51.045Z",
+      "artifacts": [
+        {
+          "format": "json",
+          "path": "current/tests/sos-e2e.json",
+          "sha256": "409bf76cadf37668134ce97f663b4afed8c2ccbcd09d60204033007853725a8f"
+        },
+        {
+          "format": "junit",
+          "path": "current/tests/sos-e2e.junit.xml",
+          "sha256": "0115b496e15c238abb67f04ed59770f114ba5ec636ecd116b959fea930c3969b"
+        }
+      ],
+      "verificationCommand": "curl -fsSL \"https://raw.githubusercontent.com/daflan-org/fawa-compliance-evidence/main/current/tests/sos-e2e.json\" -o /tmp/sos-e2e.json && echo \"409bf76cadf37668134ce97f663b4afed8c2ccbcd09d60204033007853725a8f  /tmp/sos-e2e.json\" | shasum -a 256 -c -"
+    }
+  ],
+  "verificationCommands": [
+    {
+      "label": "Verify container signature",
+      "command": "cosign verify ghcr.io/<org>/<image>@sha256:<digest> --certificate-identity-regexp \"https://github.com/<org>/falcon/.github/workflows/.*\" --certificate-oidc-issuer \"https://token.actions.githubusercontent.com\""
+    },
+    {
+      "label": "Verify container attestation",
+      "command": "cosign verify-attestation ghcr.io/<org>/<image>@sha256:<digest> --certificate-identity-regexp \"https://github.com/<org>/falcon/.github/workflows/.*\" --certificate-oidc-issuer \"https://token.actions.githubusercontent.com\""
+    },
+    {
+      "label": "Run local policy checks",
+      "command": "CHANGED_FILES_JSON='[\"packages/socket-contracts/src/app-events.ts\"]' GITHUB_REF_NAME='daf-418-store-compliance-backend-evidence-for-daf-307' GITHUB_EVENT_NAME='pull_request' yarn policy:build-input && conftest test policy-input.json -p policy/repo"
+    }
+  ],
+  "limits": [
+    "Evidence summary only includes verification metadata and source links.",
+    "Operational secrets and sensitive runtime details are intentionally excluded.",
+    "TTL behavior is asynchronous by design; deletion timing is not guaranteed instantly."
+  ]
+}
