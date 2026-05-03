@@ -1,6 +1,14 @@
 {
   "snapshots": [
     {
+      "snapshot": "history/20260503T040433.135Z-8e80982c72d2",
+      "generatedAt": "2026-05-03T04:04:33.135Z",
+      "sourceRef": "main",
+      "sourceCommitSha": "8e80982c72d2d1f181bcc040469f337b5872d303",
+      "ciRunId": "25269120853",
+      "deployRunId": "25269139115"
+    },
+    {
       "snapshot": "history/20260419T044035.080Z-f4d30629d9af",
       "generatedAt": "2026-04-19T04:40:35.080Z",
       "sourceRef": "main",
